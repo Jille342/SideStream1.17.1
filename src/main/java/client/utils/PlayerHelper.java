@@ -18,6 +18,7 @@ public class PlayerHelper {
 
         switch (mc.crosshairTarget.getType()) {
             case ENTITY:
+                assert mc.interactionManager != null;
                 mc.interactionManager.attackEntity(mc.player, mc.targetedEntity);
                 break;
 

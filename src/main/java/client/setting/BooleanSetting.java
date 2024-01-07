@@ -21,6 +21,9 @@ public class BooleanSetting extends Setting {
 	public boolean isEnable() {
 		return enable;
 	}
+	public boolean getValue() {
+		return enable;
+	}
 
 	public void setEnable(boolean enable) {
 		this.enable = enable;

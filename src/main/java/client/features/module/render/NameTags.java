@@ -2,76 +2,79 @@ package client.features.module.render;
 
 import client.event.Event;
 import client.event.listeners.EventRender2D;
-import client.event.listeners.EventUpdate;
+import client.event.listeners.RenderEvent;
 import client.features.module.Module;
 import client.setting.BooleanSetting;
 import client.setting.NumberSetting;
-import client.utils.RenderingUtils;
 import client.utils.font.Fonts;
 import client.utils.font.TTFFontRenderer;
 import client.utils.math.BillboardPos;
 import client.utils.math.MatrixUtil;
-import io.netty.util.internal.MathUtil;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.VertexFormats;
-import net.minecraft.enchantment.Enchantment;
+import client.utils.math.Vec2d;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
-import org.lwjgl.opengl.GL11;
-import client.utils.math.Vec2d;
 
-
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.lwjgl.opengl.GL11.*;
+import static client.utils.math.InterpolationUtil.lerp;
 
 
 public class NameTags extends Module {
 
-    BooleanSetting health;
 
-    NumberSetting scaleFactor;
+
     public static TTFFontRenderer customFontRenderer = Fonts.font;
-    public static TTFFontRenderer enchantFontRenderer = Fonts.font;
-    BooleanSetting renderSelf;
+    public static TTFFontRenderer enchantFontRenderer = Fonts.font3;
+    NumberSetting scaledFactor;
+    NumberSetting maxScale;
+    BooleanSetting self;
+    NumberSetting gap;
+    NumberSetting margin;
+    NumberSetting armorSpacing;
+    NumberSetting spacing;
+    BooleanSetting enchants;
     BooleanSetting armor;
-    BooleanSetting ench;
-
+    BooleanSetting health;
     public NameTags() {
         super("NameTags", 0, Category.RENDER);
     }
 
-
-    public void init() {
-        renderSelf = new BooleanSetting("Render Self", false);
-        armor = new BooleanSetting("Show Items", true);
-        ench = new BooleanSetting("show Enchant", true);
-        health = new BooleanSetting("Health", true);
-        scaleFactor = new NumberSetting("Factor", 1.0F,1.0, 10, 1);
-        addSetting(renderSelf, armor, ench,scaleFactor, health);
-        super.init();
-    }
     private float spaceWidth = 0F;
+    public void init(){
+        super.init();
+        scaledFactor = new NumberSetting("Factor",0.6D, 1D, 0.01D, 0.01D);
+        maxScale = new NumberSetting("Max Scale", 0.3D, 1D, 0.1D, 0.05D);
+        self = new BooleanSetting("Self", false);
+        gap = new NumberSetting("Gap", 5, 20, 0, 1);
+       margin = new NumberSetting("Margin",2, 10, 0, 1 );
+       armorSpacing = new NumberSetting("Armor Spacing",35, 100, 10, 1);
+        spacing = new NumberSetting("Spacing",0.3D, 1D, 0D, 0.05D);
+        enchants = new BooleanSetting("Enchants", true);
+        armor = new BooleanSetting("Armor", true);
+        health = new BooleanSetting("Health", true);
+        addSetting(scaledFactor,maxScale,self,gap,margin,armorSpacing,spacing,enchants,armor,health);
+    }
 
 
 
     public void onEvent(Event<?> e) {
-        if(e instanceof EventRender2D) {
-
+        if (e instanceof EventRender2D) {
             Vec3d camPos = mc.gameRenderer.getCamera().getPos();
 
             spaceWidth = customFontRenderer.getStringWidth(" ");
-            ;
+            MatrixStack stack = new MatrixStack();
+            RenderEvent event = new RenderEvent();
+            MatrixUtil.onRender(event);
 
             for (PlayerEntity entity : mc.world.getPlayers()) {
-                if (entity == mc.player && !renderSelf.isEnable()) continue;
-
+                if (entity == mc.player && !self.isEnable()) continue;
                 Vec3d iPos = lerpEntity(entity);
-                BillboardPos projectedPos = MatrixUtil.getBillboardPos(iPos.add(0, entity.getHeight() + 0.3, 0));
+                BillboardPos projectedPos = MatrixUtil.getBillboardPos(iPos.add(0, entity.getHeight() + spacing.getValue(), 0));
                 if (projectedPos == null) continue;
                 Vec2d screenPos = projectedPos.getProjectedPos();
                 if (screenPos == null) continue;
@@ -83,56 +86,37 @@ public class NameTags extends Module {
 
         }
     }
-    public static Vec3d lerpEntity(Entity entity) {
+    public static Vec3d lerpEntity(PlayerEntity entity) {
         double[] lerped = lerp(entity);
         return new Vec3d(lerped[0], lerped[1], lerped[2]);
     }
-    // Middle Level
-    public static double[] lerp(Entity entity) {
-        if (entity.prevX == 0D && entity.prevY == 0D && entity.prevZ == 0D) {
-            entity.prevX = entity.getX();
-            entity.prevY = entity.getY();
-            entity.prevZ = entity.getZ();
-        }
-
-        double posX = lerp(entity.lastRenderX, entity.getX(), MinecraftClient.getInstance().getTickDelta());
-        double posY = lerp(entity.lastRenderY, entity.getY(), MinecraftClient.getInstance().getTickDelta());
-        double posZ = lerp(entity.lastRenderZ, entity.getZ(), MinecraftClient.getInstance().getTickDelta());
-
-        return new double[] { posX, posY, posZ };
+    public static float roundFloat(float value, int places) {
+        BigDecimal bd = new BigDecimal(value);
+        bd = bd.setScale(places, RoundingMode.HALF_UP);
+        return bd.floatValue();
     }
-    public static float lerp(float a, float b, float partial) {
-        return (a * (1f - partial)) + (b * partial);
-    }
-
-    /**
-     * Applies a linear interpolation between the two values
-     */
-    public static double lerp(double a, double b, float partial) {
-        return (a * (1.0 - partial)) + (b * partial);
-    }
-
     private void drawNametag(PlayerEntity player, Vec3d camPos, Vec3d iPos, Vec2d screenPos)  {
+        MatrixStack stack = new MatrixStack();
         double height = 0;
 
-        double dist = 1 - iPos.distanceTo(camPos) * (0.1D * scaleFactor.getValue());
+        double dist = 1 - iPos.distanceTo(camPos) * (0.1D * scaledFactor.getValue());
 
-        if (dist < 0.3D) {
-            dist = 0.3D;
+        if (dist < maxScale.getValue()) {
+            dist = maxScale.getValue();
         }
 
-        glPushMatrix();
-        glTranslated(screenPos.x, screenPos.y, 0);
-        glScaled(dist, dist, 1D);
+      stack.push();
+        stack.translate(screenPos.x, screenPos.y, 0);
+        stack.scale((float) dist, (float) dist, 1F);
 
-        ColoredString[] strings = new ColoredString[5];
-
-
+        String[] strings = new String[5];
 
 
 
-        if (health.isEnable()) {
-            float playerHealth = player.getHealth();
+        strings[2] = player.getName().toString();
+
+        if (health.getValue()) {
+            float playerHealth = roundFloat(player.getHealth() + player.getAbsorptionAmount(), 1);
 
             if (player.getEntityName().equalsIgnoreCase("antiflame") || player.getEntityName().equalsIgnoreCase("0851_")) {
                 playerHealth += 0.69F;
@@ -140,78 +124,70 @@ public class NameTags extends Module {
 
             String health = Float.toString(playerHealth).replace(".0", "");
 
-            if (playerHealth < 5) {
-                strings[3] = new ColoredString(health, 0xFFFF4848);
-            } else if (playerHealth < 20) {
-                strings[3] = new ColoredString(health, 0xFFFFCE48);
-            } else {
-                strings[3] = new ColoredString(health, 0xFF27CC00);
-            }
-        }
 
+                strings[3] = health;
+
+        }
 
         String total = "";
         boolean first = true;
-        for (ColoredString part : strings) {
+        for (String part : strings) {
             if (part == null) continue;
             if (!first) {
                 total += " ";
             }
             first = false;
-            total += part.string;
+            total += part.toString();
         }
 
         float widthOffst = (customFontRenderer.getStringWidth(total) / 2F) + 2;
-
-            RenderingUtils.drawRect2(-widthOffst + 2, -(customFontRenderer.getFontHeight() + 2 * 2),(2 + widthOffst) * 2,  customFontRenderer.getFontHeight() + 2 * 2, 0x13144);
-
 
 
         widthOffst = -(widthOffst - 3);
 
         first = true;
-        for (ColoredString part : strings) {
+        for (String part : strings) {
             if (part == null) continue;
             if (!first) {
                 widthOffst += spaceWidth;
             }
             first = false;
-            customFontRenderer.drawString(part.string, widthOffst, -(customFontRenderer.getFontHeight() + 2), part.color);
-            widthOffst += customFontRenderer.getStringWidth(part.string);
+            customFontRenderer.drawString(part, widthOffst, -(customFontRenderer.getFontHeight() + margin.getValue()), -1);
+            widthOffst += customFontRenderer.getStringWidth(part);
         }
 
-        height += customFontRenderer.getFontHeight() + 2 * 2;
+        height += customFontRenderer.getFontHeight() + margin.getValue() * 2;
 
-        if (ench.isEnable() || armor.isEnable()) {
-
+        if (enchants.getValue() || armor.getValue()) {
+            height += gap.getValue();
 
             double xOffset = 0;
 
-            for (ItemStack stack : mc.player.getInventory().armor) {
-                if (stack != null && !stack.isEmpty()) {
-                    xOffset -= 35 / 2D;
+            for (ItemStack itemStack : mc.player.getInventory().armor) {
+                if (itemStack != null && !itemStack.isEmpty()) {
+                    xOffset -= armorSpacing.getValue() / 2D;
                 }
             }
 
             if (mc.player.getMainHandStack() != null && !mc.player.getMainHandStack().isEmpty()) {
-                xOffset -= 35 / 2D;
+                xOffset -= armorSpacing.getValue() / 2D;
             }
 
             if (mc.player.getOffHandStack() != null && !mc.player.getOffHandStack().isEmpty()) {
-                xOffset -= 35 / 2D;
+                xOffset -= armorSpacing.getValue() / 2D;
             }
 
             float maxOffset = 0F;
 
             if (mc.player.getMainHandStack() != null && !mc.player.getMainHandStack().isEmpty()) {
                 maxOffset = Math.max(maxOffset, renderItem(mc.player.getMainHandStack(), xOffset, -height));
-                xOffset += 35;
+                xOffset += armorSpacing.getValue();
             }
 
-            for (ItemStack stack : mc.player.getInventory().armor) {
-                if (stack != null && !stack.isEmpty()) {
-                    maxOffset = Math.max(maxOffset, renderItem(stack, xOffset, -height));
-                    xOffset += 35;
+            for (ItemStack itemStackstack : mc.player.getInventory().armor) {
+                if (itemStackstack != null && !stack.isEmpty()) {
+                    maxOffset = Math.max(maxOffset, renderItem(itemStackstack, xOffset, -height));
+                    xOffset += armorSpacing.getValue();
                 }
             }
 
@@ -219,33 +195,30 @@ public class NameTags extends Module {
                 maxOffset = Math.max(maxOffset, renderItem(mc.player.getOffHandStack(), xOffset, -height));
             }
 
-            if (mc.player.getMainHandStack() != null && !mc.player.getMainHandStack().isEmpty()) {
-                maxOffset = Math.max(29, maxOffset) + 2;
-                enchantFontRenderer.drawCenteredString(mc.player.getMainHandStack().getName().getString(), 0, (float) -(maxOffset + height), -1);
-            }
+
         }
 
-        glPopMatrix();
+        stack.pop();
     }
 
     private float renderItem(ItemStack stack, double xPosition, double yPosition) {
+        MatrixStack matrixStack = new MatrixStack();
         if (!stack.isEmpty()) {
             AtomicReference<Float> yOffset = new AtomicReference<>((float) 0);
 
-            if (armor.isEnable()) {
-                glPushMatrix();
-                glTranslated(xPosition, yPosition - 29, 0);
-                glScaled(2, 2, 1);
+            if (armor.getValue()) {
+                matrixStack.push();
+                matrixStack.translate(xPosition, yPosition - 29, 0);
+                matrixStack.scale(2, 2, 1);
 
                 mc.getItemRenderer().renderGuiItemIcon(stack, 0, 0);
                 mc.getItemRenderer().renderGuiItemOverlay(mc.textRenderer, stack, 0, 0);
 
-                glPopMatrix();
+                matrixStack.pop();
             }
 
-            if (ench.isEnable()) {
-                glTranslated(xPosition + 2D, yPosition, 0);
-
+            if (enchants.getValue()) {
+                matrixStack.translate(xPosition + 2D, yPosition, 0);
                 EnchantmentHelper.get(stack).forEach((enc, level) -> {
                     try {
                         String encName = enc.isCursed()
@@ -262,7 +235,7 @@ public class NameTags extends Module {
 
                 });
 
-                glTranslated(-(xPosition + 2D), -(yPosition), 0);
+                matrixStack.translate(-(xPosition + 2D), -(yPosition), 0);
             }
             return yOffset.get();
         }

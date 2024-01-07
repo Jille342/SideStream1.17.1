@@ -1,6 +1,8 @@
 package client.utils.math;
 
+import client.event.listeners.EventRender2D;
 import client.event.listeners.RenderEvent;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.math.Matrix4f;
 import net.minecraft.util.math.Quaternion;
 import net.minecraft.util.math.Vec3d;
@@ -17,8 +19,11 @@ public class MatrixUtil {
 
     // 4x4 by 4x1
     public static Quaternion mult(Matrix4f m, Quaternion q) {
-        m.multiply(q);
         return q;
+    }
+    public static  void onRender(RenderEvent event) {
+        lastEvent = event;
+        cachedScaleFactor = MinecraftClient.getInstance().getWindow().calculateScaleFactor(MinecraftClient.getInstance().options.guiScale, MinecraftClient.getInstance().forcesUnicodeFont());
     }
 
 }

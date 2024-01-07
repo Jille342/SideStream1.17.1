@@ -55,4 +55,9 @@ public class ClickGui extends Screen {
         windows.forEach(m -> m.keyPressed(keyCode, scanCode, modifiers));
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
+    @Override
+    public void onClose() {
+        windows.forEach(m -> m.onClose());
+       super.onClose();
+    }
 }

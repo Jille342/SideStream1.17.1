@@ -34,10 +34,11 @@ public class ClickGuiWindow  {
     private boolean dragging = false, expand = true;
 
     private final Module.Category category;
-    public int selectedSetting = -1;
     private final List<Module> modules;
     private final boolean[] mExpand;
-
+    int keyCode;
+    boolean pressed = false;
+    KeyBindSetting keyBindSetting = null;
     private static boolean clicked = false;
     public ClickGuiWindow(float x, float y, Module.Category category) {
         this.x = x;
@@ -135,20 +136,7 @@ public class ClickGuiWindow  {
         }
     }
 
-    public void keyPressed(int keyCode, int scanCode, int modifiers) {
-    for (int i = 0; i < modules.size(); i++) {
-        Module m = modules.get(i);
-    for (int j = 0; j < m.settings.size(); j++) {
-        final Setting s = m.settings.get(j);
-    if (clicked) {
-        if (s instanceof KeyBindSetting) {
-            ((KeyBindSetting) s).setKeyCode(keyCode);
-          clicked= false;
-        }
-    }
-    }
-    }
-}
+
 
     public void mouseClicked(double mouseX, double mouseY, int button) {
         if (ClickUtil.isHovered(x, y, 140, 18, mouseX, mouseY)) {
@@ -217,16 +205,30 @@ public class ClickGuiWindow  {
                     }
                 }
                 else if(s instanceof  KeyBindSetting) {
-                    final KeyBindSetting ks = (KeyBindSetting) s;
+               final KeyBindSetting ks = (KeyBindSetting) s;
                     if (ClickUtil.isHovered2(x, currentY, x + 120, currentY + 18, mouseX, mouseY) ) {
-                        clicked =true;
-                        ks.setKeyCode(0);
+                        if (button == 0) {
+                            keyBindSetting = ks;
+                         clicked = true;
+                        } else {
+                         ks.setKeyCode(0);
+                            keyCode = 0;
+                            clicked = false;
+                        }
+
                         return;
                     }
                 }
                 currentY += 18;
             }
         }
+    }
+    public void keyPressed(int keyCode, int scanCode, int modifiers) {
+           if(clicked) {
+               keyBindSetting.setKeyCode(keyCode);
+               clicked= false;
+           }
+
     }
 
     public void mouseReleased(double mouseX, double mouseY, int button) {
@@ -236,5 +238,8 @@ public class ClickGuiWindow  {
 
     public void mouseScrolled(double mouseX, double mouseY, double amount) {
 
+    }
+    public void onClose() {
+        clicked = false;
     }
 }
