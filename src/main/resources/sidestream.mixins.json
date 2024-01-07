@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "client.mixin.client",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "MixinClientConnection",
+    "MixinMinecraftClient",
+    "MixinClientPlayerEntity",
+    "MixinGameRenderer",
+    "MixinIngameHud",
+    "MixinKeyboard",
+    "MixinScreen"
+  ],
+  "client": [
+
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
