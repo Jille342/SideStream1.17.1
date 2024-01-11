@@ -10,7 +10,8 @@
     "MixinGameRenderer",
     "MixinIngameHud",
     "MixinKeyboard",
-    "MixinScreen"
+    "MixinScreen",
+    "MixinEntityRenderer"
   ],
   "client": [
 

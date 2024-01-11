@@ -38,6 +38,7 @@ modules.add(new Fullbright());
 		modules.add(new NameProtect());
 		modules.add(new AdminChecker());
 		modules.add(new NameTags());
+		modules.add(new NameTagsTest());
 	}
 
 	public static class ModuleComparator implements Comparator<Module> {
