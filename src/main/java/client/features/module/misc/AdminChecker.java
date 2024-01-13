@@ -19,7 +19,6 @@ import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import io.netty.buffer.ByteBuf;
-import jdk.jshell.SourceCodeAnalysis;
 import net.minecraft.client.gui.screen.CommandSuggestor;
 import net.minecraft.client.util.Window;
 import net.minecraft.command.CommandSource;
@@ -162,7 +161,8 @@ public class AdminChecker extends Module {
                 "Axyy",
                 "lPirlo",
                 "ImAbbyy",
-        "N0BUNBUN"};
+                "Friendly123"
+        };
     }
 
 

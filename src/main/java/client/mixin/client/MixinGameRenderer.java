@@ -35,8 +35,9 @@ public abstract class MixinGameRenderer {
     private void onRenderWorld(float partialTicks, long finishTimeNano,
                                MatrixStack matrixStack, CallbackInfo ci)
     {
-        EventRenderWorld event = new EventRenderWorld(partialTicks);
+        EventRenderWorld event = new EventRenderWorld(partialTicks, matrixStack);
         Client.onEvent(event);
+
     }
 
 

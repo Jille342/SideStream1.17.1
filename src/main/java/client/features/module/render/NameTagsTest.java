@@ -5,7 +5,7 @@ import client.setting.NumberSetting;
 
 public class NameTagsTest extends Module {
 
-  public static   NumberSetting scale;
+  public static NumberSetting scale;
     public NameTagsTest() {
         super("NameTagsTest", 0, Category.RENDER);
     }

@@ -1,6 +1,8 @@
 package client.mixin.client;
 
 
+import client.Client;
+import client.event.listeners.EventEntityRender;
 import client.features.module.ModuleManager;
 import client.features.module.render.NameTagsTest;
 import client.utils.RenderingUtils;
@@ -33,6 +35,13 @@ public abstract class MixinEntityRenderer<T extends Entity>
     @Inject(at = @At("HEAD"), method = "render", cancellable = true)
     public void render(T entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci)
     {
+        EventEntityRender.Single.Label event = new EventEntityRender.Single.Label(entity, matrices, vertexConsumers);
+        Client.onEvent(event);
+
+        if (event.isCancelled()) {
+            ci.cancel();
+        }
+
         if(ModuleManager.getModulebyClass(NameTagsTest.class).isEnable())
         {
             if(entity instanceof LivingEntity)
@@ -44,8 +53,7 @@ public abstract class MixinEntityRenderer<T extends Entity>
     }
 
     @Unique
-    private void
-    renderTags(T e, Text t, MatrixStack m, VertexConsumerProvider v, int l)
+    private void renderTags(T e, Text t, MatrixStack m, VertexConsumerProvider v, int l)
     {
         if(t.getString().contains("Health")) return;
         boolean bl = true;

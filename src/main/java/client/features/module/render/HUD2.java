@@ -54,7 +54,6 @@ public class HUD2 extends Module {
 
             lastPosX = mc.player.getX();
             lastPosZ = mc.player.getZ();
-
         }
     }
 }
