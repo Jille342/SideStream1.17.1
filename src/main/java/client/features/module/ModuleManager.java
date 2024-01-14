@@ -28,7 +28,7 @@ static MinecraftClient mc = MinecraftClient.getInstance();
 
 	public static void registerModules(){
 		modules.add(new ClickGUI());
-modules.add(new Fullbright());
+		modules.add(new Fullbright());
 		modules.add(new AutoClicker());
 		modules.add(new Sprint());
 		modules.add(new AimAssist());
@@ -38,6 +38,7 @@ modules.add(new Fullbright());
 		modules.add(new NameProtect());
 		modules.add(new AdminChecker());
 		modules.add(new NameTagsTest());
+		modules.add(new NameTagsTest2());
 	}
 
 	public static class ModuleComparator implements Comparator<Module> {

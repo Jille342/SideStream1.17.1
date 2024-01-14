@@ -21,8 +21,6 @@ public class HUD2 {
 
     protected MinecraftClient mc = MinecraftClient.getInstance();
 
-
-
     public HUD2() {
     }
 
