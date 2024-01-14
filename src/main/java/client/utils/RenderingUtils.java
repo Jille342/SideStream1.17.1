@@ -3,6 +3,7 @@ package client.utils;
 import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import me.x150.renderer.renderer.Renderer2d;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.render.*;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
@@ -328,6 +329,10 @@ public class RenderingUtils implements MCUtil {
         BufferRenderer.draw(bufferBuilder);
         RenderSystem.enableTexture();
         RenderSystem.disableBlend();
+    }
+    public static void fill(int x1, int y1, int x2, int y2, int color){
+        MatrixStack stack = new MatrixStack();
+        Screen.fill(stack,x1,y1,x2,y2, color);
     }
     public static void pre3D() {
         GL11.glPushMatrix();

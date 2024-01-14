@@ -95,7 +95,6 @@ public class AdminChecker extends Module {
         }
 
     public void displayAdmins() {
-
         if (timer2.hasReached(delay.value)) {
             ChatUtils.printChat(String.valueOf("INC " + admins + " " + admins.size()));
             timer2.reset();
@@ -161,16 +160,6 @@ public class AdminChecker extends Module {
                 "sabau",
                 "Axyy",
                 "lPirlo",
-                "ImAbbyy",
-        "N0BUNBUN"};
-    }
-
-
-
-
-    private void checkList(String uuid) {
-        if (this.admins.contains(uuid))
-            return;
-        this.admins.add(uuid);
+                "ImAbbyy"};
     }
 }

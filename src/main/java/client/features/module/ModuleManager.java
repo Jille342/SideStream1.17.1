@@ -37,7 +37,6 @@ modules.add(new Fullbright());
 		modules.add(new BowAimbot());
 		modules.add(new NameProtect());
 		modules.add(new AdminChecker());
-		modules.add(new NameTags());
 		modules.add(new NameTagsTest());
 	}
 

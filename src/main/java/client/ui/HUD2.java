@@ -111,7 +111,7 @@ public class HUD2 {
                 if (sortedList.size() > nextIndex)
                     nextModule = getNextEnabledModule(sortedList, nextIndex);
                 if ((Boolean) client.features.module.render.HUD2.background.enable)
-                    RenderingUtils.drawRect(translateX - 2.0D, translateY - 1.0D, width, translateY + listOffset - 1.0D, 0x90000000);
+                    RenderingUtils.fill((int) (translateX - 2.0D), (int) ((int)translateY - 1.0D), width, (int) (translateY + listOffset - 1.0D), Colors.getColor(0,0,0,50));
                 if ((Boolean) client.features.module.render.HUD2.OUTLINE.enable) {
                     RenderingUtils.drawRect(translateX - 2.6D, translateY - 1.0D, translateX - 2.0D, translateY + listOffset - 1.0D, color);
                     double offsetY = listOffset;

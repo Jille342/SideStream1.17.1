@@ -5,10 +5,12 @@ import client.event.listeners.EventRender2D;
 import client.event.listeners.EventUpdate;
 import client.features.module.Module;
 import client.setting.BooleanSetting;
+import client.setting.ModeSetting;
 import client.setting.NumberSetting;
 import client.utils.PlayerHelper;
 import client.utils.ServerHelper;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -28,8 +30,8 @@ public class AimAssist extends Module {
 
 
 
-    private final List<Entity> validated = new ArrayList<>();
-    private Entity primary;
+    private final List<LivingEntity> validated = new ArrayList<>();
+    private LivingEntity primary;
     private int breakTick;
     BooleanSetting ignoreTeamsSetting;
     BooleanSetting notHolding;
@@ -38,6 +40,7 @@ public class AimAssist extends Module {
     BooleanSetting targetMonstersSetting;
     BooleanSetting targetAnimalsSetting;
     NumberSetting fov;
+    ModeSetting sortmode;
 
     public AimAssist() {
         super("Aim Assist",  0,Category.COMBAT);
@@ -53,8 +56,10 @@ public class AimAssist extends Module {
         this.rangeSetting = new NumberSetting("Range", 5.0, 3.0, 8.0, 0.1);
         this.fov = new NumberSetting("FOV", 90.0D, 15.0D, 360.0D, 1.0D);
 
+        sortmode = new ModeSetting("SortMode", "Distance", new String[]{"Distance", "Angle"});
 
-        addSetting(notHolding, ignoreTeamsSetting, aimSpeedSetting, rangeSetting,  targetAnimalsSetting, targetMonstersSetting, fov);
+
+        addSetting(notHolding, ignoreTeamsSetting, aimSpeedSetting, rangeSetting,  targetAnimalsSetting, targetMonstersSetting, fov, sortmode);
     }
 
     @Override
@@ -67,6 +72,7 @@ public class AimAssist extends Module {
     @Override
     public void onEvent(Event<?> e) {
         if (e instanceof EventRender2D) {
+            setTag(sortmode.getMode());
             primary = findTarget();
             if (e.isPost() || primary == null || !canAssist()) {
                 return;
@@ -108,7 +114,7 @@ public class AimAssist extends Module {
         return true;
     }
 
-    private Entity findTarget() {
+    private LivingEntity findTarget() {
         validated.clear();
 
         assert mc.world != null;
@@ -128,17 +134,26 @@ public class AimAssist extends Module {
                         continue;
                     }
 
-                    validated.add(entity);
+                    validated.add((LivingEntity) entity);
                 } else if (entity instanceof AnimalEntity && targetAnimalsSetting.enable) {
-                    validated.add( entity);
+                    validated.add((LivingEntity) entity);
                 } else if (entity instanceof MobEntity && targetMonstersSetting.enable) {
-                    validated.add( entity);
+                    validated.add((LivingEntity) entity);
                 }
             }
         }
 
         if (validated.isEmpty()) return null;
-        validated.sort(Comparator.comparingDouble(this::calculateYawChangeToDst));
+        switch (sortmode.getMode()) {
+            case "Angle":
+                validated.sort(Comparator.comparingDouble(this::calculateYawChangeToDst));
+                break;
+            case "Distance":
+                validated.sort((o1, o2) -> (int) (o1.distanceTo(mc.player) - ((Entity)o2).distanceTo(mc.player)));
+
+                break;
+        }
+        this.validated.sort(Comparator.comparingInt( o -> o.hurtTime));
         return validated.get(0);
     }
 

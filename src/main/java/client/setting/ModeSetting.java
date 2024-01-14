@@ -27,6 +27,9 @@ public class ModeSetting extends Setting {
 	public String getMode() {
 		return modes.get(index);
 	}
+	public String getValue() {
+		return modes.get(index);
+	}
 	public void setModes(String a) {
 		    index = modes.indexOf(a);
 	}

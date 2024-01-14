@@ -25,9 +25,9 @@ public class NameProtect extends Module {
                 if(p instanceof GameMessageS2CPacket) {
 
                     GameMessageS2CPacket packet = (GameMessageS2CPacket) event.getPacket();
-                    if (packet.getMessage().getString().contains((CharSequence) mc.player.getName())) {
+                    if (packet.getMessage().getString().contains( mc.player.getName().getString())) {
                         String temp = packet.getMessage().toString();
-                        ChatUtils.printChatNoName(temp.replaceAll(String.valueOf(mc.player.getName()), "\247d" + Client.NAME + "User" + "\247r"));
+                        ChatUtils.printChatNoName(temp.replaceAll(String.valueOf(mc.player.getName().getString()), "\247d" + Client.NAME + "User" + "\247r"));
                         event.setCancelled(true);
                     } else {
                         String[] list = new String[]{"join", "left", "leave", "leaving", "lobby", "server", "fell", "died", "slain", "burn", "void", "disconnect", "kill", "by", "was", "quit", "blood", "game"};
