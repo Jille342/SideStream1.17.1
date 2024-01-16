@@ -57,17 +57,4 @@ public abstract class MixinEntityRenderer<T extends Entity>
         }
     }
 
-
-    @Unique
-    private void renderTags(T e, Text t, MatrixStack m, VertexConsumerProvider v, int l)
-    {
-        if(t.getString().contains("Health")) return;
-        boolean bl = true;
-        float f = e.getHeight() + 0.5F;
-        int y = "deadmau5".equals(t.getString()) ? -10 : 0;
-
-
-
-
-
 }

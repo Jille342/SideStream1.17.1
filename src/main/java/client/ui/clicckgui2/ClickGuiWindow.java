@@ -224,7 +224,7 @@ public class ClickGuiWindow  {
         }
     }
     public void keyPressed(int keyCode, int scanCode, int modifiers) {
-           if(clicked) {
+           if(clicked && keyBindSetting != null) {
                keyBindSetting.setKeyCode(keyCode);
                clicked= false;
            }

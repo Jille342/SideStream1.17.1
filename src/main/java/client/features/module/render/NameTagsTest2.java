@@ -6,9 +6,6 @@ import client.event.listeners.EventRender2D;
 import client.event.listeners.EventRenderWorld;
 import client.features.module.Module;
 import client.setting.NumberSetting;
-import client.utils.math.BillboardPos;
-import client.utils.math.MatrixUtil;
-import client.utils.math.Vec2d;
 import client.utils.render.RenderUtils;
 import com.google.common.collect.Lists;
 import net.minecraft.client.MinecraftClient;
@@ -123,15 +120,12 @@ public class NameTagsTest2 extends Module {
 
         PlayerListEntry playerEntry = mc.player.networkHandler.getPlayerListEntry(player.getGameProfile().getId());
 
-        mainText.add(new LiteralText(playerEntry.getLatency() + "ms").formatted(Formatting.GRAY));
 
         if(player.getDisplayName().getStyle().getColor() == null){
             mainText.add(((MutableText) player.getName()));
         }else{
             mainText.add(((MutableText) player.getName()).formatted(Formatting.byName(player.getDisplayName().getStyle().getColor().getName())));
         }
-
-        mainText.add(new LiteralText("[" + playerEntry.getGameMode().toString().substring(0, playerEntry.getGameMode() == GameMode.SPECTATOR ? 2 : 1) + "]").formatted(Formatting.GOLD));
 
         if (!mainText.isEmpty()){
             lines.add(Texts.join(mainText, new LiteralText(" ")));

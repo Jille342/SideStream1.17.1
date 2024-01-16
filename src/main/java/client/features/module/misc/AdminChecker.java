@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.*;
 
 import client.features.module.Module;
+import client.setting.ModeSetting;
 import client.setting.NumberSetting;
 import client.utils.ChatUtils;
 import client.utils.ServerHelper;
@@ -38,6 +39,7 @@ public class AdminChecker extends Module {
     private final TimeHelper timer2 = new TimeHelper();
 
     Window window = mc.getWindow();
+    ModeSetting checkMode;
 
 
     public AdminChecker() {
@@ -47,7 +49,8 @@ public class AdminChecker extends Module {
     }
     public void init() {
         this.delay = new NumberSetting("Chat Delay", 1000, 1000, 5000, 1000F);
-        addSetting(delay); super.init();
+        checkMode = new ModeSetting("Check Mode ", "Rank", new String[]{"Rank", "Tell"});
+        addSetting(delay, checkMode); super.init();
 
     }
 
@@ -65,7 +68,10 @@ public class AdminChecker extends Module {
                 int completionid = 0;
                 this.timer.reset();
                 mc.player.networkHandler.getCommandSource().onCommandSuggestions( completionid+1,null);
+                if(checkMode.getMode().equals("Rank"))
           mc.player.networkHandler.sendPacket(new RequestCommandCompletionsC2SPacket(completionid, "/rank "));
+                else if (checkMode.getMode().equals("Tell"))
+                    mc.player.networkHandler.sendPacket(new RequestCommandCompletionsC2SPacket(completionid, "/tell "));
             }
             setTag(String.valueOf(admins.size()));
             if (!this.admins.isEmpty())
@@ -159,7 +165,6 @@ public class AdminChecker extends Module {
                 "sabau",
                 "Axyy",
                 "lPirlo",
-<
                 "ImAbbyy"
         };
     }
