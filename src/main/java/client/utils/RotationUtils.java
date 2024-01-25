@@ -1,154 +1,163 @@
 /*
- * This file is part of Baritone.
+ * Copyright (c) 2014-2024 Wurst-Imperium and contributors.
  *
- * Baritone is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Baritone is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Baritone.  If not, see <https://www.gnu.org/licenses/>.
+ * This source code is subject to the terms of the GNU General Public
+ * License, version 3. If a copy of the GPL was not distributed with this
+ * file, You can obtain one at: https://www.gnu.org/licenses/gpl-3.0.txt
  */
-
 package client.utils;
 
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.util.math.*;
+import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.network.packet.s2c.play.EntityS2CPacket;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 
-import java.util.Optional;
+public enum RotationUtils
+{
+    ;
 
-public final class RotationUtils {
-    static MinecraftClient mc = MinecraftClient.getInstance();
-    public static final double DEG_TO_RAD = Math.PI / 180.0;
-
-    public static final double RAD_TO_DEG = 180.0 / Math.PI;
-
-    private RotationUtils() {}
-    private static float serverYaw;
-    private static float serverPitch;
-
+    private static final MinecraftClient MC = MinecraftClient.getInstance();
 
     public static Vec3d getEyesPos()
     {
-        assert mc.player != null;
-        return new Vec3d(MinecraftClient.getInstance().player.getX(),
-                mc.player.getY() + mc.player.getEyeHeight(mc.player.getPose()),
-                mc.player.getZ());
+        ClientPlayerEntity player = MC.player;
+        float eyeHeight = player.getEyeHeight(player.getPose());
+        return player.getPos().add(0, eyeHeight, 0);
     }
+
+    public static Vec3d getClientLookVec(float partialTicks)
+    {
+        float yaw = MC.player.getYaw(partialTicks);
+        float pitch = MC.player.getPitch(partialTicks);
+        return new Rotation(yaw, pitch).toLookVec();
+    }
+
     public static Vec3d getServerLookVec()
     {
-        float f = MathHelper.cos(-serverYaw * 0.017453292F - (float)Math.PI);
-        float f1 = MathHelper.sin(-serverYaw * 0.017453292F - (float)Math.PI);
-        float f2 = -MathHelper.cos(-serverPitch * 0.017453292F);
-        float f3 = MathHelper.sin(-serverPitch * 0.017453292F);
-        return new Vec3d(f1 * f2, f3, f * f2);
+        RotationFaker rf = new RotationFaker();
+        return new Rotation(rf.getServerYaw(), rf.getServerPitch()).toLookVec();
     }
-    private static float[] getNeededRotations(Vec3d vec)
+
+    public static Rotation getNeededRotations(Vec3d vec)
     {
-        Vec3d eyesPos = getEyesPos();
+        Vec3d eyes = getEyesPos();
 
-        double diffX = vec.x - eyesPos.x;
-        double diffY = vec.y - eyesPos.y;
-        double diffZ = vec.z - eyesPos.z;
+        double diffX = vec.x - eyes.x;
+        double diffZ = vec.z - eyes.z;
+        double yaw = Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
 
+        double diffY = vec.y - eyes.y;
         double diffXZ = Math.sqrt(diffX * diffX + diffZ * diffZ);
+        double pitch = -Math.toDegrees(Math.atan2(diffY, diffXZ));
 
-        float yaw = (float)Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
-        float pitch = (float)-Math.toDegrees(Math.atan2(diffY, diffXZ));
-
-        return new float[]{MathHelper.wrapDegrees(yaw), MathHelper.wrapDegrees(pitch)};
+        return Rotation.wrapped((float)yaw, (float)pitch);
     }
+
+    public static double getAngleToLookVec(Vec3d vec)
+    {
+        ClientPlayerEntity player = MC.player;
+        Rotation current = new Rotation(player.getYaw(), player.getPitch());
+        Rotation needed = getNeededRotations(vec);
+        return current.getAngleTo(needed);
+    }
+
+    public static float getHorizontalAngleToLookVec(Vec3d vec)
+    {
+        float currentYaw = MathHelper.wrapDegrees(MC.player.getYaw());
+        float neededYaw = getNeededRotations(vec).yaw();
+        return MathHelper.wrapDegrees(currentYaw - neededYaw);
+    }
+
+    /**
+     * Returns true if the player is already facing within 1 degree of the
+     * specified rotation.
+     */
+
+
+
+
+    /**
+     * Returns true if the player is facing anywhere within the given box
+     * and is no further away than the given range.
+     */
+    public static boolean isFacingBox(Box box, double range)
+    {
+        Vec3d start = getEyesPos();
+        Vec3d end = start.add(getServerLookVec().multiply(range));
+        return box.raycast(start, end).isPresent();
+    }
+
+    /**
+     * Returns the next rotation that the player should be facing in order to
+     * slowly turn towards the specified end rotation, at a rate of roughly
+     * <code>maxChange</code> degrees per tick.
+     */
+    public static Rotation slowlyTurnTowards(Rotation end, float maxChange)
+    {
+        float startYaw = MC.player.prevYaw;
+        float startPitch = MC.player.prevPitch;
+        float endYaw = end.yaw();
+        float endPitch = end.pitch();
+
+        float yawChange = Math.abs(MathHelper.wrapDegrees(endYaw - startYaw));
+        float pitchChange =
+                Math.abs(MathHelper.wrapDegrees(endPitch - startPitch));
+
+        float maxChangeYaw =
+                Math.min(maxChange, maxChange * yawChange / pitchChange);
+        float maxChangePitch =
+                Math.min(maxChange, maxChange * pitchChange / yawChange);
+
+        float nextYaw = limitAngleChange(startYaw, endYaw, maxChangeYaw);
+        float nextPitch =
+                limitAngleChange(startPitch, endPitch, maxChangePitch);
+
+        return new Rotation(nextYaw, nextPitch);
+    }
+
+    /**
+     * Limits the change in angle between the current and intended rotation to
+     * the specified maximum change. Useful for smoothing out rotations and
+     * making combat hacks harder to detect.
+     *
+     * <p>
+     * For best results, do not wrap the current angle before calling this
+     * method!
+     */
     public static float limitAngleChange(float current, float intended,
                                          float maxChange)
     {
-        float change = MathHelper.wrapDegrees(intended - current);
+        float currentWrapped = MathHelper.wrapDegrees(current);
+        float intendedWrapped = MathHelper.wrapDegrees(intended);
 
+        float change = MathHelper.wrapDegrees(intendedWrapped - currentWrapped);
         change = MathHelper.clamp(change, -maxChange, maxChange);
 
-        return MathHelper.wrapDegrees(current + change);
+        return current + change;
     }
 
-
-    public static Rotation wrapAnglesToRelative(Rotation current, Rotation target) {
-        if (current.yawIsReallyClose(target)) {
-            return new Rotation(current.getYaw(), target.getPitch());
-        }
-        return target.subtract(current).normalize().add(current);
-    }
-
-    public static Rotation calcRotationFromVec3d(Vec3d orig, Vec3d dest, Rotation current) {
-        return wrapAnglesToRelative(current, calcRotationFromVec3d(orig, dest));
-    }
-
-    private static Rotation calcRotationFromVec3d(Vec3d orig, Vec3d dest) {
-        double[] delta = {orig.x - dest.x, orig.y - dest.y, orig.z - dest.z};
-        double yaw = MathHelper.atan2(delta[0], -delta[2]);
-        double dist = Math.sqrt(delta[0] * delta[0] + delta[2] * delta[2]);
-        double pitch = MathHelper.atan2(delta[1], dist);
-        return new Rotation(
-                (float) (yaw * RAD_TO_DEG),
-                (float) (pitch * RAD_TO_DEG)
-        );
-    }
-
-    public static Vec3d calcVec3dFromRotation(Rotation rotation) {
-        float f = MathHelper.cos(-rotation.getYaw() * (float) DEG_TO_RAD - (float) Math.PI);
-        float f1 = MathHelper.sin(-rotation.getYaw() * (float) DEG_TO_RAD - (float) Math.PI);
-        float f2 = -MathHelper.cos(-rotation.getPitch() * (float) DEG_TO_RAD);
-        float f3 = MathHelper.sin(-rotation.getPitch() * (float) DEG_TO_RAD);
-        return new Vec3d((double) (f1 * f2), (double) f3, (double) (f * f2));
-    }
-
-    public static Optional<Rotation> reachableOffset(Entity entity, BlockPos pos, Vec3d offsetPos, double blockReachDistance, boolean wouldSneak) {
-        /*Vec3d eyes = wouldSneak ? RayTraceUtils.inferSneakingEyePosition(entity) : entity.getPositionEyes(1.0F);
-        Rotation rotation = calcRotationFromVec3d(eyes, offsetPos, new Rotation(entity.rotationYaw, entity.rotationPitch));
-        RayTraceResult result = RayTraceUtils.rayTraceTowards(entity, rotation, blockReachDistance, wouldSneak);
-        //System.out.println(result);
-        if (result != null && result.typeOfHit == RayTraceResult.Type.BLOCK) {
-            if (result.getBlockPos().equals(pos)) {
-                return Optional.of(rotation);
-            }
-            if (entity.world.getBlockState(pos).getBlock() instanceof BlockFire && result.getBlockPos().equals(pos.down())) {
-                return Optional.of(rotation);
-            }
-        }
-        return Optional.empty();*/
-        return null;
-    }
-
-    public static boolean faceEntityClient(Entity entity)
+    /**
+     * Removes unnecessary changes in angle caused by wrapping. Useful for
+     * making combat hacks harder to detect.
+     *
+     * <p>
+     * For example, if the current angle is 179 degrees and the intended angle
+     * is -179 degrees, you only need to turn 2 degrees to face the intended
+     * angle, not 358 degrees.
+     *
+     * <p>
+     * DO NOT wrap the current angle before calling this method! You will get
+     * incorrect results if you do.
+     */
+    public static float limitAngleChange(float current, float intended)
     {
-        // get position & rotation
-        Vec3d eyesPos = getEyesPos();
-        Vec3d lookVec = getServerLookVec();
+        float currentWrapped = MathHelper.wrapDegrees(current);
+        float intendedWrapped = MathHelper.wrapDegrees(intended);
 
-        // try to face center of boundingBox
-        Box bb = entity.getBoundingBox();
-        if(faceVectorClient(bb.getCenter()))
-            return true;
+        float change = MathHelper.wrapDegrees(intendedWrapped - currentWrapped);
 
-        // if not facing center, check if facing anything in boundingBox
-        return bb.intersects(eyesPos,
-                eyesPos.add(lookVec.multiply(6)));
-    }
-    public static boolean faceVectorClient(Vec3d vec)
-    {
-        float[] rotations = getNeededRotations(vec);
-
-        float oldYaw =mc.player.prevYaw;
-        float oldPitch = mc.player.prevPitch;
-
-        mc.player.bodyYaw =
-                limitAngleChange(oldYaw, rotations[0], 30);
-        mc.player.setPitch(rotations[1]);
-
-        return Math.abs(oldYaw - rotations[0])
-                + Math.abs(oldPitch - rotations[1]) < 1F;
+        return current + change;
     }
 }

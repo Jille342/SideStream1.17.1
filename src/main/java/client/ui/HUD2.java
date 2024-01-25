@@ -8,14 +8,25 @@ import client.utils.Translate;
 import client.Client;
 import client.utils.font.Fonts;
 import client.utils.font.TTFFontRenderer;
+import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.resource.language.I18n;
 import net.minecraft.client.util.Window;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.entity.effect.StatusEffect;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.item.ItemStack;
+import net.minecraft.potion.Potion;
+import net.minecraft.stat.Stat;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.opengl.GL11;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.Potions;
 
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.*;
+import java.util.List;
 
 public class HUD2 {
 
@@ -57,10 +68,60 @@ public class HUD2 {
                 Fonts.font.drawString(coord, Fonts.font.getStringWidth(fps) + 6, scaledResolution.getScaledHeight() - height, -1);
                            }
             Fonts.font.drawString(build, 5, 16, -1);
+            if(client.features.module.render.HUD2.armor.isEnable()) {
+                drawArmorStatus(scaledResolution);
+            }
+            if(client.features.module.render.HUD2.effects.isEnable()) {
+                drawPotionStatus(scaledResolution);
+            }
 
             this.drawGaeHud();
         }
 
+    }
+    private void drawPotionStatus(Window sr) {
+        float pY = (mc.currentScreen != null ) ? -26 : -12;
+        assert mc.player != null;
+        Collection<StatusEffectInstance> collection = mc.player.getStatusEffects();
+
+        for (StatusEffectInstance effect : collection) {
+            String name = I18n.translate(effect.getEffectType().getTranslationKey(), new Object[0]);
+            String PType = "";
+            if (effect.getAmplifier() == 1) {
+                name = name + " II";
+            } else if (effect.getAmplifier() == 2) {
+                name = name + " III";
+            } else if (effect.getAmplifier() == 3) {
+                name = name + " IV";
+            }
+            if ((effect.getDuration() < 600) && (effect.getDuration() > 300)) {
+                PType = PType + "\2476 " + effect.getDuration();
+            } else if (effect.getDuration() < 300) {
+                PType = PType + "\247c " + effect.getDuration();
+            } else if (effect.getDuration() > 600) {
+                PType = PType + "\2477 " + effect.getDuration();
+            }
+            Fonts.font.drawStringWithShadow(name, sr.getScaledWidth() - Fonts.font.getStringWidth(name + PType) - 3, sr.getScaledHeight() - 9 + pY, -1);
+            Fonts.font.drawStringWithShadow(PType, sr.getScaledWidth() - Fonts.font.getStringWidth(PType) - 2, sr.getScaledHeight() - 9 + pY, -1);
+            pY -= 9;
+        }
+    }
+    private void drawArmorStatus(Window scaledRes) {
+        assert mc.player != null;
+        MatrixStack matrixStack = new MatrixStack();
+        if (!mc.player.isCreative()) {
+            int x = 15;
+            matrixStack.push();
+            for (int index = 3; index >= 0; index--) {
+                ItemStack stack = mc.player.getInventory().armor.get(index);
+                if (stack != null) {
+                    mc.getItemRenderer().renderInGui(stack, scaledRes.getScaledWidth() / 2 + x - 1, scaledRes.getScaledHeight() - (mc.player.isInsideWaterOrBubbleColumn() ? 65 : 55) - 2);
+                    mc.getItemRenderer().renderGuiItemOverlay(mc.textRenderer, stack, scaledRes.getScaledWidth() / 2 + x - 1, scaledRes.getScaledHeight() - (mc.player.isInsideWaterOrBubbleColumn() ? 65 : 55) - 2);
+                    x += 18;
+                }
+            }
+           matrixStack.pop();
+        }
     }
 
     private void drawGaeHud() {

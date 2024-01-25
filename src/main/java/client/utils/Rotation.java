@@ -1,101 +1,64 @@
 /*
- * This file is part of Baritone.
+ * Copyright (c) 2014-2024 Wurst-Imperium and contributors.
  *
- * Baritone is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Baritone is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with Baritone.  If not, see <https://www.gnu.org/licenses/>.
+ * This source code is subject to the terms of the GNU General Public
+ * License, version 3. If a copy of the GPL was not distributed with this
+ * file, You can obtain one at: https://www.gnu.org/licenses/gpl-3.0.txt
  */
-
 package client.utils;
 
-public class Rotation {
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
 
-    private float yaw;
+public record Rotation(float yaw, float pitch)
+{
+    private static final MinecraftClient MC = MinecraftClient.getInstance();
 
-    private float pitch;
-
-    public Rotation(float yaw, float pitch) {
-        this.yaw = yaw;
-        this.pitch = pitch;
-    }
-    
-    public float getYaw() {
-        return this.yaw;
-    }
-    
-    public float getPitch() {
-        return this.pitch;
-    }
-    public Rotation add(Rotation other) {
-        return new Rotation(
-                this.yaw + other.yaw,
-                this.pitch + other.pitch
-        );
-    }
-    
-    public Rotation subtract(Rotation other) {
-        return new Rotation(
-                this.yaw - other.yaw,
-                this.pitch - other.pitch
-        );
+    public void sendPlayerLookPacket()
+    {
+        sendPlayerLookPacket(MC.player.isOnGround());
     }
 
-    public Rotation clamp() {
-        return new Rotation(
-                this.yaw,
-                clampPitch(this.pitch)
-        );
+    public void sendPlayerLookPacket(boolean onGround)
+    {
+        MC.player.networkHandler.sendPacket(
+                new PlayerMoveC2SPacket.LookAndOnGround(yaw, pitch, onGround));
     }
 
-    public Rotation normalize() {
-        return new Rotation(
-                normalizeYaw(this.yaw),
-                this.pitch
-        );
+    public double getAngleTo(Rotation other)
+    {
+        float yaw1 = MathHelper.wrapDegrees(yaw);
+        float yaw2 = MathHelper.wrapDegrees(other.yaw);
+        float diffYaw = MathHelper.wrapDegrees(yaw1 - yaw2);
+
+        float pitch1 = MathHelper.wrapDegrees(pitch);
+        float pitch2 = MathHelper.wrapDegrees(other.pitch);
+        float diffPitch = MathHelper.wrapDegrees(pitch1 - pitch2);
+
+        return Math.sqrt(diffYaw * diffYaw + diffPitch * diffPitch);
     }
 
-    public Rotation normalizeAndClamp() {
-        return new Rotation(
-                normalizeYaw(this.yaw),
-                clampPitch(this.pitch)
-        );
+    public Vec3d toLookVec()
+    {
+        float radPerDeg = MathHelper.RADIANS_PER_DEGREE;
+        float pi = MathHelper.PI;
+
+        float adjustedYaw = -MathHelper.wrapDegrees(yaw) * radPerDeg - pi;
+        float cosYaw = MathHelper.cos(adjustedYaw);
+        float sinYaw = MathHelper.sin(adjustedYaw);
+
+        float adjustedPitch = -MathHelper.wrapDegrees(pitch) * radPerDeg;
+        float nCosPitch = -MathHelper.cos(adjustedPitch);
+        float sinPitch = MathHelper.sin(adjustedPitch);
+
+        return new Vec3d(sinYaw * nCosPitch, sinPitch, cosYaw * nCosPitch);
     }
 
-    public boolean isReallyCloseTo(Rotation other) {
-        return yawIsReallyClose(other) && Math.abs(this.pitch - other.pitch) < 0.01;
-    }
-
-    public boolean yawIsReallyClose(Rotation other) {
-        float yawDiff = Math.abs(normalizeYaw(yaw) - normalizeYaw(other.yaw)); // you cant fool me
-        return (yawDiff < 0.01 || yawDiff > 359.99);
-    }
-
-    public static float clampPitch(float pitch) {
-        return Math.max(-90, Math.min(90, pitch));
-    }
-
-    public static float normalizeYaw(float yaw) {
-        float newYaw = yaw % 360F;
-        if (newYaw < -180F) {
-            newYaw += 360F;
-        }
-        if (newYaw > 180F) {
-            newYaw -= 360F;
-        }
-        return newYaw;
-    }
-
-    @Override
-    public String toString() {
-        return "Yaw: " + yaw + ", Pitch: " + pitch;
+    public static Rotation wrapped(float yaw, float pitch)
+    {
+        return new Rotation(MathHelper.wrapDegrees(yaw),
+                MathHelper.wrapDegrees(pitch));
     }
 }

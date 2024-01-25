@@ -39,6 +39,8 @@ static MinecraftClient mc = MinecraftClient.getInstance();
 		modules.add(new AdminChecker());
 		modules.add(new NameTagsTest());
 		modules.add(new NameTagsTest2());
+		modules.add(new Chams());
+		modules.add(new NameTagsTest3());
 	}
 
 	public static class ModuleComparator implements Comparator<Module> {

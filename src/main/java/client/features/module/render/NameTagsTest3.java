@@ -3,15 +3,22 @@ package client.features.module.render;
 import client.event.Event;
 import client.event.listeners.EventEntityRender;
 import client.event.listeners.EventRender2D;
+import client.event.listeners.EventRenderGUI;
 import client.event.listeners.EventRenderWorld;
 import client.features.module.Module;
+import client.setting.BooleanSetting;
 import client.setting.NumberSetting;
+import client.utils.font.Fonts;
 import client.utils.render.RenderUtils;
 import com.google.common.collect.Lists;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.render.*;
+import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.resource.language.I18n;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.Entity;
@@ -21,6 +28,7 @@ import net.minecraft.text.*;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.Vec3f;
 import net.minecraft.world.GameMode;
 import org.apache.commons.lang3.text.WordUtils;
 
@@ -29,35 +37,43 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class NameTagsTest2 extends Module {
+import static client.utils.render.RenderUtils.matrixFrom;
+
+public class NameTagsTest3 extends Module {
 
     public static NumberSetting scale;
+    public static BooleanSetting armor;
 
-    public NameTagsTest2() {
-        super("NameTagsTest2", 0, Category.RENDER);
+    public NameTagsTest3() {
+        super("NameTagsTest3", 0, Category.RENDER);
     }
 
     @Override
     public void init() {
         super.init();
         scale  =new NumberSetting("Scale", 1, 0, 10,1);
-        addSetting(scale);
+        armor  = new BooleanSetting("Armor", true);
+        addSetting(scale, armor);
     }
-    @Override
-    public void onEvent(Event event){
-        if(event instanceof EventRenderWorld){
 
+    @Override
+    public void onEvent(Event<?> event){
+        if(event instanceof EventRenderGUI){
+ MatrixStack stack = new MatrixStack();
             for (PlayerEntity entity : mc.world.getPlayers()) {
                 if (entity == mc.player || entity.hasPassenger(mc.player) || Objects.requireNonNull(mc.player).hasPassenger(entity)) {
                     continue;
                 }
-                Vec3d rPos = entity.getPos().subtract(this.getInterpolationOffset(entity)).add(0, entity.getHeight() + 0.25, 0);
+                Vec3d rPos = entity.getPos().subtract(getInterpolationOffset(entity)).add(0, entity.getHeight() + 0.25, 0);
 
+                assert mc.cameraEntity != null;
                 double scale = Math.max(NameTagsTest2.scale.getValue() * (mc.cameraEntity.distanceTo(entity) / 20), 1);
 
                 List<Text> lines = getPlayerLines((PlayerEntity) entity);
-
-                drawItems(rPos.x, rPos.y + (lines.size() + 1) * 0.25 * scale, rPos.z, scale, getMainEquipment(entity));
+                stack.translate(rPos.x,rPos.y, 0);
+                if(armor.enable) {
+                    drawItems(rPos.x, rPos.y + (lines.size() + 1) * 0.25 * scale, rPos.z, scale, getMainEquipment(entity));
+                }
                 drawLines(rPos.x, rPos.y, rPos.z, scale, lines);
 
             }
@@ -72,7 +88,7 @@ public class NameTagsTest2 extends Module {
 
         for (Text t: lines) {
 
-            RenderUtils.drawText(t, x, y + offset, z, scale, true);
+            drawText(t, x, y + offset, z,0,0, scale, true);
             offset -= 0.25 * scale;
         }
     }
@@ -89,10 +105,10 @@ public class NameTagsTest2 extends Module {
         if (item.isEmpty())
             return;
 
-        RenderUtils.drawGuiItem(x, y, z, offX * scale, offY * scale, scale, item);
+       drawGuiItem(x, y, z, offX * scale, offY * scale, scale, item);
 
         double w = mc.textRenderer.getWidth("x" + item.getCount()) / 52d;
-        RenderUtils.drawText(new LiteralText("x" + item.getCount()),
+        drawText(new LiteralText("x" + item.getCount()),
                 x, y, z, (offX - w) * scale, (offY - 0.07) * scale, scale * 1.75, false);
 
         int c = 0;
@@ -106,17 +122,74 @@ public class NameTagsTest2 extends Module {
 
             String subText = text.substring(0, Math.min(text.length(), 2)) + m.getValue();
 
-            RenderUtils.drawText(new LiteralText(subText).styled(s -> s.withColor(TextColor.fromRgb(m.getKey().isCursed() ? 0xff5050 : 0xffb0e0))),
+            drawText(new LiteralText(subText).styled(s -> s.withColor(TextColor.fromRgb(m.getKey().isCursed() ? 0xff5050 : 0xffb0e0))),
                     x, y, z, (offX + 0.02) * scale, (offY + 0.75 - c * 0.34) * scale, scale * 1.4, false);
             c--;
         }
+    }
+    public static void drawText(Text text, double x, double y, double z, double offX, double offY, double scale, boolean fill) {
+        MatrixStack matrices = new MatrixStack();
+
+        Camera camera = mc.gameRenderer.getCamera();
+        matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-camera.getYaw()));
+        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(camera.getPitch()));
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
+        matrices.translate(offX, offY, 0);
+        matrices.scale(-0.025f * (float) scale, -0.025f * (float) scale, 1);
+
+        int halfWidth = mc.textRenderer.getWidth(text) / 2;
+
+        VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
+
+        if (fill) {
+            Fonts.font.drawString(text.asString(), -halfWidth, 0f, 553648127);
+            immediate.draw();
+        } else {
+            matrices.push();
+            matrices.translate(1, 1, 0);
+            Fonts.font.drawString(text.asString(), -halfWidth, 0f, 553648127);
+            immediate.draw();
+            matrices.pop();
+        }
+
+        Fonts.font.drawString(text.asString(), -halfWidth, 0f, -1);
+        immediate.draw();
+
+
+        RenderSystem.disableBlend();
+    }
+    public static  void drawGuiItem(double x, double y, double z, double offX, double offY, double scale, ItemStack item){
+        MatrixStack matrices = new MatrixStack();
+
+        Camera camera = mc.gameRenderer.getCamera();
+        matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(-camera.getYaw()));
+        matrices.multiply(Vec3f.POSITIVE_X.getDegreesQuaternion(camera.getPitch()));
+
+        matrices.translate(offX, offY, 0);
+        matrices.scale((float) scale, (float) scale, 0.001f);
+
+        matrices.multiply(Vec3f.POSITIVE_Y.getDegreesQuaternion(180f));
+
+        mc.getBufferBuilders().getEntityVertexConsumers().draw();
+
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+
+        DiffuseLighting.disableGuiDepthLighting();
+
+        mc.getItemRenderer().renderGuiItemIcon(item, 0, 0);
+        mc.getItemRenderer().renderGuiItemOverlay(mc.textRenderer, item, 0, 0);
+
+
+        RenderSystem.disableBlend();
     }
 
     public List<Text> getPlayerLines(PlayerEntity player) {
         List<Text> lines = new ArrayList<>();
         List<Text> mainText = new ArrayList<>();
-
-        PlayerListEntry playerEntry = mc.player.networkHandler.getPlayerListEntry(player.getGameProfile().getId());
 
 
         if(player.getDisplayName().getStyle().getColor() == null){

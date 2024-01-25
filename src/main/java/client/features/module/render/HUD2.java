@@ -16,7 +16,8 @@ public class HUD2 extends Module {
     public static BooleanSetting inversion;
     public static ModeSetting colormode;
     public static ModeSetting namecolormode;
-
+    public static BooleanSetting armor;
+    public static BooleanSetting effects;
     public static double lastPosX = Double.NaN;
     public static double lastPosZ = Double.NaN;
       public static ArrayList<Double> distances = new ArrayList<Double>();
@@ -36,7 +37,9 @@ public class HUD2 extends Module {
         info = new BooleanSetting("Info", true);
         OUTLINE = new BooleanSetting("Outline", true);
         inversion = new BooleanSetting("Outline", true);
-        addSetting(info, OUTLINE, background, colormode, inversion, namecolormode);
+        armor = new BooleanSetting("Armor", true);
+        effects = new BooleanSetting("Effects", true);
+        addSetting(info, OUTLINE, background, colormode, inversion, namecolormode,armor,effects);
     }
 
     @Override

@@ -13,6 +13,7 @@ import client.features.module.Module;
 import client.setting.BooleanSetting;
 import client.setting.NumberSetting;
 import client.utils.PlayerHelper;
+import client.utils.RotationFaker;
 import client.utils.RotationUtils;
 import client.utils.ServerHelper;
 import net.minecraft.entity.mob.MobEntity;
@@ -43,6 +44,7 @@ public final class BowAimbot extends Module
     BooleanSetting targetAnimalsSetting;
     BooleanSetting ignoreTeamsSetting;
     NumberSetting fov;
+    NumberSetting predictMovement;
     public BowAimbot()
     {
         super("BowAimbot", 0, Module.Category.COMBAT);
@@ -55,10 +57,11 @@ public final class BowAimbot extends Module
         this.targetMonstersSetting = new BooleanSetting("Target Monsters", true);
         this.targetAnimalsSetting = new BooleanSetting("Target Animals", false);
         this.ignoreTeamsSetting = new BooleanSetting("Ignore Teams", true);
+
         this.fov = new NumberSetting("FOV", 40.0D, 15.0D, 360.0D, 1.0D);
+        this.predictMovement = new NumberSetting("Predict Movement", 0.2D, 0D, 2D, 0.01D);
 
-
-        addSetting( ignoreTeamsSetting,targetAnimalsSetting, targetMonstersSetting, fov);
+        addSetting( ignoreTeamsSetting,targetAnimalsSetting, targetMonstersSetting, fov, predictMovement);
     }
 
     public void onEvent(Event<?> e) {
@@ -73,6 +76,12 @@ public final class BowAimbot extends Module
             // check if item is bow
             ItemStack item = mc.player.getInventory().getMainHandStack();
             if (item == null || !(item.getItem() instanceof BowItem)) {
+                return;
+            }
+            if(item.getItem() instanceof BowItem && !mc.options.keyUse.isPressed()
+                    && !mc.player.isUsingItem())
+            {
+                target = null;
                 return;
             }
 
@@ -92,19 +101,18 @@ public final class BowAimbot extends Module
 
 
             // set position to aim at
-            double d = RotationUtils.getEyesPos()
-                    .distanceTo(target.getBoundingBox().getCenter());
-            double posX = target.getX() + (target.getX() - target.prevX) * d
+            double d = RotationUtils.getEyesPos().distanceTo(
+                    target.getBoundingBox().getCenter()) * predictMovement.getValue();
+            double posX = target.getX() + (target.getX() - target.lastRenderX) * d
                     - mc.player.getX();
-            double posY = target.getY() + (target.getY() - target.prevY) * d
+            double posY = target.getY() + (target.getY() - target.lastRenderY) * d
                     + target.getHeight() * 0.5 - mc.player.getY()
-                    - mc.player.getEyeHeight(target.getPose());
-            double posZ = target.getZ() + (target.getZ() - target.prevZ) * d
+                    - mc.player.getEyeHeight(mc.player.getPose());
+            double posZ = target.getZ() + (target.getZ() - target.lastRenderZ) * d
                     - mc.player.getZ();
-
             // set yaw
-            mc.player.bodyYaw =
-                    (float) Math.toDegrees(Math.atan2(posZ, posX)) - 90;
+            mc.player.setYaw((float) Math.toDegrees(Math.atan2(posZ, posX)) - 90);
+
 
             // calculate needed pitch
             double hDistance = Math.sqrt(posX * posX + posZ * posZ);
@@ -118,7 +126,7 @@ public final class BowAimbot extends Module
 
             // set pitch
             if (Float.isNaN(neededPitch))
-                RotationUtils.faceEntityClient(target);
+                RotationFaker.faceVectorClient(target.getBoundingBox().getCenter());
             else
                 mc.player.setPitch(neededPitch);
         }
