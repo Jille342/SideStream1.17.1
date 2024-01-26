@@ -31,7 +31,7 @@ public class PlayerHelper {
     }
     public static boolean fov(Entity entity, double fov) {
         fov = (fov * 0.5);
-        double v = ((double)(mc.player.bodyYaw - fovToEntity(entity)) % 360.0D + 540.0D) % 360.0D - 180.0D;
+        double v = ((double)(mc.player.getYaw() - fovToEntity(entity)) % 360.0D + 540.0D) % 360.0D - 180.0D;
         return v > 0.0D && v < fov || -fov < v && v < 0.0D;
     }
     public static float fovToEntity(Entity ent) {

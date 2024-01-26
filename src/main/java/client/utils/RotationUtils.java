@@ -9,6 +9,7 @@ package client.utils;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.network.packet.s2c.play.EntityS2CPacket;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
@@ -32,6 +33,18 @@ public enum RotationUtils
         float yaw = MC.player.getYaw(partialTicks);
         float pitch = MC.player.getPitch(partialTicks);
         return new Rotation(yaw, pitch).toLookVec();
+    }
+    public static float calculateYawChangeToDst(Entity entity) {
+        double diffX = entity.getX() - MC.player.getX();
+        double diffZ = entity.getZ() - MC.player.getZ();
+        double deg = Math.toDegrees(Math.atan(diffZ / diffX));
+        if (diffZ < 0.0 && diffX < 0.0) {
+            return (float) MathHelper.wrapDegrees(-(MC.player.getYaw() - (90 + deg)));
+        } else if (diffZ < 0.0 && diffX > 0.0) {
+            return (float) MathHelper.wrapDegrees(-(MC.player.getYaw() - (-90 + deg)));
+        } else {
+            return (float) MathHelper.wrapDegrees(-(MC.player.getYaw() - Math.toDegrees(-Math.atan(diffX / diffZ))));
+        }
     }
 
     public static Vec3d getServerLookVec()

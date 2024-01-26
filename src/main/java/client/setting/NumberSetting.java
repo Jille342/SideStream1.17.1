@@ -27,8 +27,8 @@ public class NumberSetting extends Setting {
 	public void setValue(float posX, float width, float mouseX) {
 		this.setValue((mouseX - posX) * (this.maximum - this.minimum) / width + this.minimum);
 	}
-	public double getValue() {
-		return value;
+	public float getValue() {
+		return (float) value;
 	}
 
 	public void setValue(double value) {

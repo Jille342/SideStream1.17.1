@@ -5,7 +5,6 @@ import client.features.module.ModuleManager;
 import client.Client;
 import client.event.listeners.EventCameraTransform;
 import client.event.listeners.EventRenderWorld;
-import client.features.module.combat.Hitbox;
 import client.features.module.combat.Reach;
 import com.google.common.base.Predicates;
 import net.minecraft.client.render.GameRenderer;

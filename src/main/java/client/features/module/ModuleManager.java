@@ -4,6 +4,7 @@ import client.event.listeners.EventKey;
 import client.features.module.combat.*;
 import client.features.module.misc.*;
 import client.features.module.movement.Sprint;
+import client.features.module.player.NoBreakDelay;
 import client.features.module.render.*;
 import client.setting.BooleanSetting;
 import client.setting.KeyBindSetting;
@@ -41,6 +42,9 @@ static MinecraftClient mc = MinecraftClient.getInstance();
 		modules.add(new NameTagsTest2());
 		modules.add(new Chams());
 		modules.add(new NameTagsTest3());
+		modules.add(new NoBreakDelay());
+		modules.add(new HitBoxes());
+		modules.add(new Reach());
 	}
 
 	public static class ModuleComparator implements Comparator<Module> {
