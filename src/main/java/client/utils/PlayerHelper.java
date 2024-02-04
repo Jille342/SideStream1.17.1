@@ -12,6 +12,7 @@ public class PlayerHelper {
 
     public static void legitAttack() {
         MinecraftClient mc = MinecraftClient.getInstance();
+        mc.player.swingHand(Hand.MAIN_HAND);
         if (mc.crosshairTarget == null || mc.player.isRiding()) {
             return;
         }
@@ -27,7 +28,7 @@ public class PlayerHelper {
             case MISS:
         }
 
-        mc.player.swingHand(Hand.MAIN_HAND);
+
     }
     public static boolean fov(Entity entity, double fov) {
         fov = (fov * 0.5);
